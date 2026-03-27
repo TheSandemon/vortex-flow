@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VORTEX FLOW</title>
+<link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Space+Mono&family=Rajdhani:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;overflow:hidden;font-family:'Rajdhani',sans-serif;user-select:none}
+canvas{display:block;position:fixed;top:0;left:0}
+#title{position:fixed;top:18px;left:24px;font-family:'Syncopate',sans-serif;font-size:18px;font-weight:700;color:#00ff88;letter-spacing:6px;text-shadow:0 0 20px #00ff8866;pointer-events:none;z-index:10}
+#subtitle{position:fixed;top:44px;left:26px;font-family:'Space Mono',monospace;font-size:10px;color:#D4A853;letter-spacing:3px;pointer-events:none;z-index:10;opacity:.7}
+#ui{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:10;flex-wrap:wrap;justify-content:center}
+.btn{display:inline-block;padding:8px 18px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:#0a0a0a;background:#D4A853;border:1px solid #D4A853;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.btn:hover{background:#00ff88;border-color:#00ff88;text-shadow:none}
+.btn.active{background:#00ff88;border-color:#00ff88;color:#0a0a0a}
+#hint{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);font-family:'Space Mono',monospace;font-size:10px;color:#555;letter-spacing:1px;text-align:center;pointer-events:none;z-index:10}
+#stats{position:fixed;top:18px;right:24px;font-family:'Space Mono',monospace;font-size:10px;color:#333;letter-spacing:1px;text-align:right;pointer-events:none;z-index:10;line-height:1.8}
+#stats span{color:#D4A853}
+#mode-display{position:fixed;top:80px;left:26px;font-family:'Syncopate',sans-serif;font-size:11px;color:#00ff88;letter-spacing:3px;pointer-events:none;z-index:10;opacity:.6}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="title">VORTEX FLOW</div>
+<div id="subtitle">PERLIN NOISE FLOW FIELD</div>
+<div id="mode-display">FLOW MODE: SPIRAL</div>
+<div id="stats">
+  <div>PARTICLES: <span id="pc">0</span></div>
+  <div>ATTRACTORS: <span id="ac">0</span></div>
+  <div>FPS: <span id="fps">--</span></div>
+</div>
+<div id="ui">
+  <button class="btn active" data-mode="0">SPIRAL</button>
+  <button class="btn" data-mode="1">PERLIN</button>
+  <button class="btn" data-mode="2">CURL</button>
+  <button class="btn" data-mode="3">RADIAL</button>
+  <button class="btn" data-mode="4">SWIRL</button>
+  <button class="btn" onclick="clearA()">CLR ATtract</button>
+  <button class="btn" onclick="clearP()">CLR PART</button>
+  <button class="btn" onclick="toggleNoise()">PERLIN NOISE</button>
+</div>
+<div id="hint">CLICK canvas to add attractors • DRAG to push particles • 1-5 = modes • C = clear all • R = reset</div>
+<script>
+const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
+let W,H;
+
+const particles=[];
+const attractors=[];
+let mode=0;
+let time=0;
+let mouse={x:0,y:0,down:false};
+let usePerlin=false;
+let noiseOffset=0;
+let dragMode=false;
+
+const MODES=['SPIRAL','PERLIN','CURL','RADIAL','SWIRL'];
+const pal=['#00ff88','#D4A853','#ff6b6b','#6bffff','#ff6bff'];
+
+function resize(){
+  W=canvas.width=window.innerWidth;
+  H=canvas.height=window.innerHeight;
+  document.getElementById('pc').textContent=particles.length;
+}
+window.addEventListener('resize',resize);
+resize();
+
+// Perlin noise
+const p=[];
+for(let i=0;i<256;i++) p[i]=Math.random()*256;
+const perm=[];
+for(let i=0;i<512;i++) perm[i]=p[i&255];
+
+function fade(t){return t*t*t*(t*(t*6-15)+10);}
+function lerp(a,b,t){return a+t*(b-a);}
+function grad(h,x,y){
+  h&=3;
+  const u=h<2?x:y,v=h<2?y:x;
+  return((h&1)?-u:u)+((h&2)?-v:v);
+}
+function noise2(x,y){
+  const X=Math.floor(x)&255,Y=Math.floor(y)&255;
+  x-=Math.floor(x);y-=Math.floor(y);
+  const u=fade(x),v=fade(y);
+  const A=perm[X]+Y,B=perm[X+1]+Y;
+  return lerp(lerp(grad(perm[A],x,y),grad(perm[B],x-1,y),u),
+              lerp(grad(perm[A+1],x,y-1),grad(perm[B+1],x-1,y-1),u),v);
+}
+
+function fbm(x,y,oct=4){
+  let v=0,a=.5,f=1;
+  for(let i=0;i<oct;i++){v+=a*noise2(x*f,y*f);a*=.5;f*=2;}
+  return v;
+}
+
+class Particle{
+  constructor(x,y){
+    this.x=x||Math.random()*W;
+    this.y=y||Math.random()*H;
+    this.vx=(Math.random()-.5)*2;
+    this.vy=(Math.random()-.5)*2;
+    this.life=Math.random()*200+300;
+    this.maxLife=this.life;
+    this.hue=Math.random()*60+100;
+    this.size=Math.random()*2+1;
+    this.trail=[];
+    this.trailLen=20;
+  }
+  update(){
+    const cx=W/2,cy=H/2;
+    let fx=0,fy=0;
+
+    // flow field
+    const scale=0.003;
+    let angle;
+    const nx=this.x*scale,ny=this.y*scale;
+
+    if(mode===0){ // spiral
+      const dx=this.x-cx,dy=this.y-cy;
+      const d=Math.sqrt(dx*dx+dy*dy)+1;
+      angle=Math.atan2(dy,dx)+Math.PI*1.5+Math.sin(time*0.02)*0.5;
+      const spiral=Math.min(d*0.01,3);
+      fx=Math.cos(angle)*spiral;
+      fy=Math.sin(angle)*spiral;
+      const pull=(d-200)*0.0003;
+      fx-=dx/d*pull;
+      fy-=dy/d*pull;
+    } else if(mode===1){ // perlin
+      angle=noise2(nx+noiseOffset,ny+noiseOffset)*Math.PI*4;
+      fx=Math.cos(angle)*2;
+      fy=Math.sin(angle)*2;
+    } else if(mode===2){ // curl
+      const eps=0.01;
+      const n1=noise2(nx+eps,ny);
+      const n2=noise2(nx-eps,ny);
+      const n3=noise2(nx,ny+eps);
+      const n4=noise2(nx,ny-eps);
+      fx=(n3-n4)/(2*eps);
+      fy=-(n1-n2)/(2*eps);
+      fx*=3;fy*=3;
+    } else if(mode===3){ // radial
+      const dx=this.x-cx,dy=this.y-cy;
+      const d=Math.sqrt(dx*dx+dy*dy)+1;
+      angle=Math.atan2(dy,dx)+time*0.01;
+      const wave=noise2(nx*2+noiseOffset,ny*2)*3;
+      fx=Math.cos(angle)*(2+wave);
+      fy=Math.sin(angle)*(2+wave);
+      const pull=(d-250)*0.002;
+      fx+=dx/d*pull;
+      fy+=dy/d*pull;
+    } else { // swirl
+      const t=time*0.015;
+      angle=noise2(nx+t,ny+t)*Math.PI*6+Math.atan2(this.y-cy,this.x-cx)*2;
+      fx=Math.cos(angle)*2.5;
+      fy=Math.sin(angle)*2.5;
+    }
+
+    // attractors
+    for(const a of attractors){
+      const dx=a.x-this.x,dy=a.y-this.y;
+      const d=Math.sqrt(dx*dx+dy*dy)+1;
+      const force=a.str/(d*d)*8;
+      fx+=dx/d*force;
+      fy+=dy/d*force;
+    }
+
+    // mouse drag
+    if(dragMode&&mouse.down){
+      const dx=mouse.x-this.x,dy=mouse.y-this.y;
+      const d=Math.sqrt(dx*dx+dy*dy)+1;
+      const force=200/(d*d);
+      fx+=dx/d*force;
+      fy+=dy/d*force;
+    }
+
+    this.vx=(this.vx+fx*0.15)*0.96;
+    this.vy=(this.vy+fy*0.15)*0.96;
+    const spd=Math.sqrt(this.vx*this.vx+this.vy*this.vy);
+    if(spd>8){this.vx=this.vx/spd*8;this.vy=this.vy/spd*8;}
+
+    this.trail.push({x:this.x,y:this.y});
+    if(this.trail.length>this.trailLen)this.trail.shift();
+
+    this.x+=this.vx;
+    this.y+=this.vy;
+    this.life--;
+
+    if(this.x<0)this.x=W;
+    if(this.x>W)this.x=0;
+    if(this.y<0)this.y=H;
+    if(this.y>H)this.y=0;
+  }
+  draw(){
+    const spd=Math.sqrt(this.vx*this.vx+this.vy*this.vy);
+    const hue=spd<1?160:spd<3?80:40;
+    const alpha=Math.min(1,this.life/this.maxLife*3);
+
+    if(this.trail.length>1){
+      ctx.beginPath();
+      ctx.moveTo(this.trail[0].x,this.trail[0].y);
+      for(let i=1;i<this.trail.length;i++){
+        ctx.lineTo(this.trail[i].x,this.trail[i].y);
+      }
+      ctx.lineTo(this.x,this.y);
+      const g=ctx.createLinearGradient(
+        this.trail[0].x,this.trail[0].y,this.x,this.y
+      );
+      g.addColorStop(0,`hsla(${hue},100%,50%,0)`);
+      g.addColorStop(1,`hsla(${hue},100%,60%,${alpha*0.6})`);
+      ctx.strokeStyle=g;
+      ctx.lineWidth=this.size*0.8;
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+    ctx.fillStyle=`hsla(${hue},100%,65%,${alpha})`;
+    ctx.fill();
+  }
+}
+
+// Spawn initial particles
+for(let i=0;i<400;i++)particles.push(new Particle());
+
+// Attractor class
+class Attractor{
+  constructor(x,y,str=1){
+    this.x=x;this.y=y;this.str=str;
+    this.phase=Math.random()*Math.PI*2;
+  }
+  draw(){
+    const pulse=Math.sin(time*0.05+this.phase)*0.3+0.7;
+    const size=8+this.str*3;
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,size*pulse,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(212,168,83,${0.4*pulse})`;
+    ctx.lineWidth=1.5;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,size*0.4*pulse,0,Math.PI*2);
+    ctx.fillStyle=`rgba(0,255,136,${0.2*pulse})`;
+    ctx.fill();
+  }
+}
+
+canvas.addEventListener('mousedown',e=>{
+  if(e.shiftKey){
+    dragMode=true;
+    mouse.x=e.clientX;
+    mouse.y=e.clientY;
+    mouse.down=true;
+  } else {
+    const a=new Attractor(e.clientX,e.clientY,1);
+    attractors.push(a);
+    updateAC();
+  }
+});
+canvas.addEventListener('mousemove',e=>{
+  mouse.x=e.clientX;
+  mouse.y=e.clientY;
+  if(mouse.down&&dragMode){
+    for(const p of particles){
+      const dx=mouse.x-p.x,dy=mouse.y-p.y;
+      const d=Math.sqrt(dx*dx+dy*dy)+1;
+      const force=200/(d*d);
+      p.vx+=dx/d*force*0.3;
+      p.vy+=dy/d*force*0.3;
+    }
+  }
+});
+canvas.addEventListener('mouseup',()=>{mouse.down=false;dragMode=false;});
+canvas.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  let best=null,bd=50;
+  for(const a of attractors){
+    const d=Math.hypot(a.x-e.clientX,a.y-e.clientY);
+    if(d<bd){bd=d;best=a;}
+  }
+  if(best){attractors.splice(attractors.indexOf(best),1);updateAC();}
+});
+
+window.addEventListener('keydown',e=>{
+  if(e.key==='1')setMode(0);
+  if(e.key==='2')setMode(1);
+  if(e.key==='3')setMode(2);
+  if(e.key==='4')setMode(3);
+  if(e.key==='5')setMode(4);
+  if(e.key==='c'||e.key==='C'){clearA();clearP();}
+  if(e.key==='r'||e.key==='R'){particles.length=0;for(let i=0;i<400;i++)particles.push(new Particle());updatePC();}
+});
+
+function setMode(m){
+  mode=m;
+  document.querySelectorAll('.btn[data-mode]').forEach((b,i)=>b.classList.toggle('active',parseInt(b.dataset.mode)===m));
+  document.getElementById('mode-display').textContent='FLOW MODE: '+MODES[m];
+}
+
+document.querySelectorAll('.btn[data-mode]').forEach(b=>{
+  b.addEventListener('click',()=>setMode(parseInt(b.dataset.mode)));
+});
+
+function clearA(){attractors.length=0;updateAC();}
+function clearP(){particles.length=0;updatePC();}
+function toggleNoise(){usePerlin=!usePerlin;}
+
+function updatePC(){document.getElementById('pc').textContent=particles.length;}
+function updateAC(){document.getElementById('ac').textContent=attractors.length;}
+
+let last=0,fps=0;
+function loop(ts){
+  fps=Math.round(1000/(ts-last));
+  last=ts;
+  document.getElementById('fps').textContent=fps;
+
+  ctx.fillStyle='rgba(10,10,10,0.15)';
+  ctx.fillRect(0,0,W,H);
+
+  // draw attractors
+  for(const a of attractors)a.draw();
+
+  // update & draw particles
+  noiseOffset+=0.002;
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.update();
+    p.draw();
+    if(p.life<=0){
+      particles.splice(i,1);
+      updatePC();
+    }
+  }
+
+  // spawn
+  if(particles.length<500&&Math.random()<0.3){
+    particles.push(new Particle());
+    updatePC();
+  }
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
