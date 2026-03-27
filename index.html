@@ -11,37 +11,54 @@ body{background:#0a0a0a;overflow:hidden;font-family:'Rajdhani',sans-serif;user-s
 canvas{display:block;position:fixed;top:0;left:0}
 #title{position:fixed;top:18px;left:24px;font-family:'Syncopate',sans-serif;font-size:18px;font-weight:700;color:#00ff88;letter-spacing:6px;text-shadow:0 0 20px #00ff8866;pointer-events:none;z-index:10}
 #subtitle{position:fixed;top:44px;left:26px;font-family:'Space Mono',monospace;font-size:10px;color:#D4A853;letter-spacing:3px;pointer-events:none;z-index:10;opacity:.7}
-#ui{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:10;flex-wrap:wrap;justify-content:center}
-.btn{display:inline-block;padding:8px 18px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;letter-spacing:2px;color:#0a0a0a;background:#D4A853;border:1px solid #D4A853;cursor:pointer;transition:all .15s;text-transform:uppercase}
-.btn:hover{background:#00ff88;border-color:#00ff88;text-shadow:none}
+#ui{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10;flex-wrap:wrap;justify-content:center;align-items:center}
+.btn{display:inline-block;padding:7px 14px;font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:700;letter-spacing:1.5px;color:#0a0a0a;background:#D4A853;border:1px solid #D4A853;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.btn:hover{background:#00ff88;border-color:#00ff88}
 .btn.active{background:#00ff88;border-color:#00ff88;color:#0a0a0a}
-#hint{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);font-family:'Space Mono',monospace;font-size:10px;color:#555;letter-spacing:1px;text-align:center;pointer-events:none;z-index:10}
+.btn.small{padding:5px 10px;font-size:10px;letter-spacing:1px}
+#hint{position:fixed;bottom:68px;left:50%;transform:translateX(-50%);font-family:'Space Mono',monospace;font-size:10px;color:#555;letter-spacing:1px;text-align:center;pointer-events:none;z-index:10;white-space:nowrap}
 #stats{position:fixed;top:18px;right:24px;font-family:'Space Mono',monospace;font-size:10px;color:#333;letter-spacing:1px;text-align:right;pointer-events:none;z-index:10;line-height:1.8}
 #stats span{color:#D4A853}
 #mode-display{position:fixed;top:80px;left:26px;font-family:'Syncopate',sans-serif;font-size:11px;color:#00ff88;letter-spacing:3px;pointer-events:none;z-index:10;opacity:.6}
+#ctrl{display:flex;position:fixed;top:65px;right:24px;flex-direction:column;gap:6px;z-index:10}
+.ctrl-row{display:flex;align-items:center;gap:8px;font-family:'Space Mono',monospace;font-size:9px;color:#555;letter-spacing:1px}
+.ctrl-row input[type="range"]{width:60px;accent-color:#00ff88}
+.ctrl-row span{color:#D4A853;min-width:28px}
+#theme-tag{position:fixed;top:65px;left:26px;font-family:'Space Mono',monospace;font-size:10px;color:#D4A853;letter-spacing:2px;pointer-events:none;z-index:10}
+#audio-indicator{position:fixed;top:100px;left:26px;font-family:'Space Mono',monospace;font-size:9px;color:#555;letter-spacing:1px;pointer-events:none;z-index:10}
+#audio-indicator span{color:#666}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="title">VORTEX FLOW</div>
 <div id="subtitle">PERLIN NOISE FLOW FIELD</div>
+<div id="theme-tag">NEON</div>
 <div id="mode-display">FLOW MODE: SPIRAL</div>
+<div id="audio-indicator">MIC: <span id="mic-status">OFF</span></div>
+<div id="ctrl">
+  <div class="ctrl-row">GLOW <input type="range" id="glow-slider" min="0" max="20" value="6"> <span id="glow-val">6</span></div>
+  <div class="ctrl-row">TRAIL <input type="range" id="trail-slider" min="5" max="60" value="20"> <span id="trail-val">20</span></div>
+  <div class="ctrl-row">LINES <input type="range" id="lines-slider" min="0" max="80" value="0"> <span id="lines-val">OFF</span></div>
+</div>
 <div id="stats">
   <div>PARTICLES: <span id="pc">0</span></div>
   <div>ATTRACTORS: <span id="ac">0</span></div>
   <div>FPS: <span id="fps">--</span></div>
 </div>
 <div id="ui">
-  <button class="btn active" data-mode="0">SPIRAL</button>
-  <button class="btn" data-mode="1">PERLIN</button>
-  <button class="btn" data-mode="2">CURL</button>
-  <button class="btn" data-mode="3">RADIAL</button>
-  <button class="btn" data-mode="4">SWIRL</button>
-  <button class="btn" onclick="clearA()">CLR ATtract</button>
-  <button class="btn" onclick="clearP()">CLR PART</button>
-  <button class="btn" onclick="toggleNoise()">PERLIN NOISE</button>
+  <button class="btn active small" data-mode="0">SPIRAL</button>
+  <button class="btn small" data-mode="1">PERLIN</button>
+  <button class="btn small" data-mode="2">CURL</button>
+  <button class="btn small" data-mode="3">RADIAL</button>
+  <button class="btn small" data-mode="4">SWIRL</button>
+  <button class="btn small" onclick="clearA()">CLR ATTR</button>
+  <button class="btn small" onclick="clearP()">CLR PART</button>
+  <button class="btn small" onclick="cycleTheme()">THEME</button>
+  <button class="btn small" id="mic-btn" onclick="toggleMic()">MIC ON</button>
+  <button class="btn small" onclick="spawnBurst()">BURST</button>
 </div>
-<div id="hint">CLICK canvas to add attractors • DRAG to push particles • 1-5 = modes • C = clear all • R = reset</div>
+<div id="hint">CLICK = attract &bull; RIGHT-CLICK = repel &bull; SHIFT+DRAG = push &bull; 1-5 = modes &bull; T = theme &bull; M = mic &bull; P = screenshot &bull; L = lines &bull; C = clear</div>
 <script>
 const canvas=document.getElementById('c'),ctx=canvas.getContext('2d');
 let W,H;
@@ -51,17 +68,32 @@ const attractors=[];
 let mode=0;
 let time=0;
 let mouse={x:0,y:0,down:false};
-let usePerlin=false;
 let noiseOffset=0;
 let dragMode=false;
+let micActive=false;
+let audioCtx=null,analyser=null,dataArray=null;
+
+// Color themes
+const THEMES={
+  NEON:  {accent:'#00ff88',bg:'#0a0a0a',hueBase:120},
+  GOLD:  {accent:'#D4A853',bg:'#0a0a0a',hueBase:45},
+  CYBER: {accent:'#00d4ff',bg:'#0a0a0a',hueBase:190},
+  VOID:  {accent:'#cc44ff',bg:'#0a0a0a',hueBase:280}
+};
+const themeKeys=Object.keys(THEMES);
+let themeIdx=0;
+function getTheme(){return THEMES[themeKeys[themeIdx]];}
+
+let glowIntensity=6;
+let trailLength=20;
+let lineDist=0;
 
 const MODES=['SPIRAL','PERLIN','CURL','RADIAL','SWIRL'];
-const pal=['#00ff88','#D4A853','#ff6b6b','#6bffff','#ff6bff'];
 
 function resize(){
   W=canvas.width=window.innerWidth;
   H=canvas.height=window.innerHeight;
-  document.getElementById('pc').textContent=particles.length;
+  updatePC();
 }
 window.addEventListener('resize',resize);
 resize();
@@ -88,49 +120,106 @@ function noise2(x,y){
               lerp(grad(perm[A+1],x,y-1),grad(perm[B+1],x-1,y-1),u),v);
 }
 
-function fbm(x,y,oct=4){
-  let v=0,a=.5,f=1;
-  for(let i=0;i<oct;i++){v+=a*noise2(x*f,y*f);a*=.5;f*=2;}
-  return v;
+function getAudioLevel(){
+  if(!analyser||!dataArray) return 0;
+  analyser.getByteFrequencyData(dataArray);
+  let sum=0;
+  for(let i=0;i<dataArray.length;i++) sum+=dataArray[i];
+  return sum/dataArray.length/255;
+}
+
+function getAudioBass(){
+  if(!analyser||!dataArray) return 0;
+  analyser.getByteFrequencyData(dataArray);
+  let sum=0;
+  for(let i=0;i<8;i++) sum+=dataArray[i];
+  return sum/8/255;
+}
+
+function spawnBurst(){
+  const cx=W/2,cy=H/2;
+  for(let i=0;i<80;i++){
+    const a=new Particle(cx+(Math.random()-.5)*200,cy+(Math.random()-.5)*200);
+    a.vx=(Math.random()-.5)*12;
+    a.vy=(Math.random()-.5)*12;
+    a.life=200;
+    particles.push(a);
+  }
+  updatePC();
+}
+
+async function toggleMic(){
+  if(!micActive){
+    try{
+      audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      const source=audioCtx.createMediaStreamSource(stream);
+      analyser=audioCtx.createAnalyser();
+      analyser.fftSize=256;
+      source.connect(analyser);
+      dataArray=new Uint8Array(analyser.frequencyBinCount);
+      micActive=true;
+      document.getElementById('mic-status').textContent='ON';
+      document.getElementById('mic-status').style.color='#00ff88';
+      document.getElementById('mic-btn').textContent='MIC OFF';
+      document.getElementById('mic-btn').style.background='#00ff88';
+    }catch(e){
+      document.getElementById('mic-status').textContent='DENIED';
+    }
+  } else {
+    if(audioCtx){audioCtx.close();audioCtx=null;analyser=null;dataArray=null;}
+    micActive=false;
+    document.getElementById('mic-status').textContent='OFF';
+    document.getElementById('mic-status').style.color='#666';
+    document.getElementById('mic-btn').textContent='MIC ON';
+    document.getElementById('mic-btn').style.background='#D4A853';
+  }
+}
+
+function cycleTheme(){
+  themeIdx=(themeIdx+1)%themeKeys.length;
+  const t=getTheme();
+  document.getElementById('theme-tag').textContent=themeKeys[themeIdx];
+  document.getElementById('theme-tag').style.color=t.accent;
 }
 
 class Particle{
   constructor(x,y){
-    this.x=x||Math.random()*W;
-    this.y=y||Math.random()*H;
+    this.x=x!==undefined?x:Math.random()*W;
+    this.y=y!==undefined?y:Math.random()*H;
     this.vx=(Math.random()-.5)*2;
     this.vy=(Math.random()-.5)*2;
     this.life=Math.random()*200+300;
     this.maxLife=this.life;
-    this.hue=Math.random()*60+100;
     this.size=Math.random()*2+1;
     this.trail=[];
-    this.trailLen=20;
+    this.trailLen=trailLength;
   }
   update(){
     const cx=W/2,cy=H/2;
     let fx=0,fy=0;
-
-    // flow field
     const scale=0.003;
     let angle;
     const nx=this.x*scale,ny=this.y*scale;
+    const audioLevel=getAudioLevel();
+    const bass=getAudioBass();
+    const audioBoost=1+audioLevel*3;
 
-    if(mode===0){ // spiral
+    if(mode===0){
       const dx=this.x-cx,dy=this.y-cy;
       const d=Math.sqrt(dx*dx+dy*dy)+1;
       angle=Math.atan2(dy,dx)+Math.PI*1.5+Math.sin(time*0.02)*0.5;
-      const spiral=Math.min(d*0.01,3);
+      const spiral=Math.min(d*0.01,3)*audioBoost;
       fx=Math.cos(angle)*spiral;
       fy=Math.sin(angle)*spiral;
       const pull=(d-200)*0.0003;
       fx-=dx/d*pull;
       fy-=dy/d*pull;
-    } else if(mode===1){ // perlin
+    } else if(mode===1){
       angle=noise2(nx+noiseOffset,ny+noiseOffset)*Math.PI*4;
-      fx=Math.cos(angle)*2;
-      fy=Math.sin(angle)*2;
-    } else if(mode===2){ // curl
+      fx=Math.cos(angle)*2*audioBoost;
+      fy=Math.sin(angle)*2*audioBoost;
+    } else if(mode===2){
       const eps=0.01;
       const n1=noise2(nx+eps,ny);
       const n2=noise2(nx-eps,ny);
@@ -138,34 +227,44 @@ class Particle{
       const n4=noise2(nx,ny-eps);
       fx=(n3-n4)/(2*eps);
       fy=-(n1-n2)/(2*eps);
-      fx*=3;fy*=3;
-    } else if(mode===3){ // radial
+      fx*=3*audioBoost;fy*=3*audioBoost;
+    } else if(mode===3){
       const dx=this.x-cx,dy=this.y-cy;
       const d=Math.sqrt(dx*dx+dy*dy)+1;
       angle=Math.atan2(dy,dx)+time*0.01;
       const wave=noise2(nx*2+noiseOffset,ny*2)*3;
-      fx=Math.cos(angle)*(2+wave);
-      fy=Math.sin(angle)*(2+wave);
+      fx=Math.cos(angle)*(2+wave)*audioBoost;
+      fy=Math.sin(angle)*(2+wave)*audioBoost;
       const pull=(d-250)*0.002;
       fx+=dx/d*pull;
       fy+=dy/d*pull;
-    } else { // swirl
+    } else {
       const t=time*0.015;
       angle=noise2(nx+t,ny+t)*Math.PI*6+Math.atan2(this.y-cy,this.x-cx)*2;
-      fx=Math.cos(angle)*2.5;
-      fy=Math.sin(angle)*2.5;
+      fx=Math.cos(angle)*2.5*audioBoost;
+      fy=Math.sin(angle)*2.5*audioBoost;
     }
 
-    // attractors
     for(const a of attractors){
       const dx=a.x-this.x,dy=a.y-this.y;
       const d=Math.sqrt(dx*dx+dy*dy)+1;
       const force=a.str/(d*d)*8;
-      fx+=dx/d*force;
-      fy+=dy/d*force;
+      if(a.type==='repel'){
+        fx-=dx/d*force;
+        fy-=dy/d*force;
+      } else {
+        fx+=dx/d*force;
+        fy+=dy/d*force;
+      }
     }
 
-    // mouse drag
+    if(micActive&&bass>0.3){
+      const dx=this.x-cx,dy=this.y-cy;
+      const d=Math.sqrt(dx*dx+dy*dy)+1;
+      fx-=dx/d*bass*5;
+      fy-=dy/d*bass*5;
+    }
+
     if(dragMode&&mouse.down){
       const dx=mouse.x-this.x,dy=mouse.y-this.y;
       const d=Math.sqrt(dx*dx+dy*dy)+1;
@@ -177,7 +276,8 @@ class Particle{
     this.vx=(this.vx+fx*0.15)*0.96;
     this.vy=(this.vy+fy*0.15)*0.96;
     const spd=Math.sqrt(this.vx*this.vx+this.vy*this.vy);
-    if(spd>8){this.vx=this.vx/spd*8;this.vy=this.vy/spd*8;}
+    const maxSpd=8+audioLevel*8;
+    if(spd>maxSpd){this.vx=this.vx/spd*maxSpd;this.vy=this.vy/spd*maxSpd;}
 
     this.trail.push({x:this.x,y:this.y});
     if(this.trail.length>this.trailLen)this.trail.shift();
@@ -193,56 +293,79 @@ class Particle{
   }
   draw(){
     const spd=Math.sqrt(this.vx*this.vx+this.vy*this.vy);
-    const hue=spd<1?160:spd<3?80:40;
+    const audioLevel=getAudioLevel();
+    const THEME=getTheme();
+    const hueBase=THEME.hueBase;
+    const hue=hueBase+(spd<1?30:spd<3?0:-20);
     const alpha=Math.min(1,this.life/this.maxLife*3);
+    const sz=this.size*(1+audioLevel*2);
 
     if(this.trail.length>1){
       ctx.beginPath();
       ctx.moveTo(this.trail[0].x,this.trail[0].y);
-      for(let i=1;i<this.trail.length;i++){
-        ctx.lineTo(this.trail[i].x,this.trail[i].y);
-      }
+      for(let i=1;i<this.trail.length;i++) ctx.lineTo(this.trail[i].x,this.trail[i].y);
       ctx.lineTo(this.x,this.y);
-      const g=ctx.createLinearGradient(
-        this.trail[0].x,this.trail[0].y,this.x,this.y
-      );
+      const g=ctx.createLinearGradient(this.trail[0].x,this.trail[0].y,this.x,this.y);
       g.addColorStop(0,`hsla(${hue},100%,50%,0)`);
       g.addColorStop(1,`hsla(${hue},100%,60%,${alpha*0.6})`);
       ctx.strokeStyle=g;
-      ctx.lineWidth=this.size*0.8;
+      ctx.lineWidth=sz*0.8;
+      if(glowIntensity>0){ctx.shadowBlur=glowIntensity;ctx.shadowColor=`hsl(${hue},100%,60%)`;}
       ctx.stroke();
+      ctx.shadowBlur=0;
     }
 
     ctx.beginPath();
-    ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
+    ctx.arc(this.x,this.y,sz,0,Math.PI*2);
     ctx.fillStyle=`hsla(${hue},100%,65%,${alpha})`;
+    if(glowIntensity>0){ctx.shadowBlur=glowIntensity;ctx.shadowColor=`hsl(${hue},100%,65%)`;}
     ctx.fill();
+    ctx.shadowBlur=0;
   }
 }
 
-// Spawn initial particles
 for(let i=0;i<400;i++)particles.push(new Particle());
 
-// Attractor class
 class Attractor{
-  constructor(x,y,str=1){
-    this.x=x;this.y=y;this.str=str;
+  constructor(x,y,str=1,type='attract'){
+    this.x=x;this.y=y;this.str=str;this.type=type;
     this.phase=Math.random()*Math.PI*2;
   }
   draw(){
     const pulse=Math.sin(time*0.05+this.phase)*0.3+0.7;
     const size=8+this.str*3;
-    ctx.beginPath();
-    ctx.arc(this.x,this.y,size*pulse,0,Math.PI*2);
-    ctx.strokeStyle=`rgba(212,168,83,${0.4*pulse})`;
-    ctx.lineWidth=1.5;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(this.x,this.y,size*0.4*pulse,0,Math.PI*2);
-    ctx.fillStyle=`rgba(0,255,136,${0.2*pulse})`;
-    ctx.fill();
+    if(this.type==='repel'){
+      ctx.beginPath();
+      ctx.arc(this.x,this.y,size*pulse,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(255,80,80,${0.5*pulse})`;
+      ctx.lineWidth=1.5;
+      ctx.setLineDash([4,4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(this.x,this.y,size*0.4*pulse,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,80,80,${0.2*pulse})`;
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(this.x,this.y,size*pulse,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(212,168,83,${0.4*pulse})`;
+      ctx.lineWidth=1.5;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(this.x,this.y,size*0.4*pulse,0,Math.PI*2);
+      ctx.fillStyle=`rgba(0,255,136,${0.2*pulse})`;
+      ctx.fill();
+    }
   }
 }
+
+canvas.addEventListener('contextmenu',e=>{
+  e.preventDefault();
+  const a=new Attractor(e.clientX,e.clientY,1,'repel');
+  attractors.push(a);
+  updateAC();
+});
 
 canvas.addEventListener('mousedown',e=>{
   if(e.shiftKey){
@@ -250,8 +373,8 @@ canvas.addEventListener('mousedown',e=>{
     mouse.x=e.clientX;
     mouse.y=e.clientY;
     mouse.down=true;
-  } else {
-    const a=new Attractor(e.clientX,e.clientY,1);
+  } else if(e.button===0){
+    const a=new Attractor(e.clientX,e.clientY,1,'attract');
     attractors.push(a);
     updateAC();
   }
@@ -270,15 +393,15 @@ canvas.addEventListener('mousemove',e=>{
   }
 });
 canvas.addEventListener('mouseup',()=>{mouse.down=false;dragMode=false;});
-canvas.addEventListener('contextmenu',e=>{
+canvas.addEventListener('mouseleave',()=>{mouse.down=false;dragMode=false;});
+
+canvas.addEventListener('touchstart',e=>{
   e.preventDefault();
-  let best=null,bd=50;
-  for(const a of attractors){
-    const d=Math.hypot(a.x-e.clientX,a.y-e.clientY);
-    if(d<bd){bd=d;best=a;}
-  }
-  if(best){attractors.splice(attractors.indexOf(best),1);updateAC();}
-});
+  const t=e.touches[0];
+  const a=new Attractor(t.clientX,t.clientY,1,'attract');
+  attractors.push(a);
+  updateAC();
+},{passive:false});
 
 window.addEventListener('keydown',e=>{
   if(e.key==='1')setMode(0);
@@ -288,7 +411,28 @@ window.addEventListener('keydown',e=>{
   if(e.key==='5')setMode(4);
   if(e.key==='c'||e.key==='C'){clearA();clearP();}
   if(e.key==='r'||e.key==='R'){particles.length=0;for(let i=0;i<400;i++)particles.push(new Particle());updatePC();}
+  if(e.key==='t'||e.key==='T')cycleTheme();
+  if(e.key==='m'||e.key==='M')toggleMic();
+  if(e.key==='p'||e.key==='P')screenshot();
+  if(e.key==='l'||e.key==='L'){
+    lineDist=lineDist===0?40:0;
+    document.getElementById('lines-slider').value=lineDist;
+    document.getElementById('lines-val').textContent=lineDist===0?'OFF':lineDist;
+  }
 });
+
+function screenshot(){
+  const tmp=document.createElement('canvas');
+  tmp.width=W;tmp.height=H;
+  const tctx=tmp.getContext('2d');
+  tctx.fillStyle='#0a0a0a';
+  tctx.fillRect(0,0,W,H);
+  tctx.drawImage(canvas,0,0);
+  const link=document.createElement('a');
+  link.download='vortex-flow-'+Date.now()+'.png';
+  link.href=tmp.toDataURL();
+  link.click();
+}
 
 function setMode(m){
   mode=m;
@@ -302,10 +446,23 @@ document.querySelectorAll('.btn[data-mode]').forEach(b=>{
 
 function clearA(){attractors.length=0;updateAC();}
 function clearP(){particles.length=0;updatePC();}
-function toggleNoise(){usePerlin=!usePerlin;}
 
 function updatePC(){document.getElementById('pc').textContent=particles.length;}
 function updateAC(){document.getElementById('ac').textContent=attractors.length;}
+
+document.getElementById('glow-slider').addEventListener('input',function(){
+  glowIntensity=parseInt(this.value);
+  document.getElementById('glow-val').textContent=this.value;
+});
+document.getElementById('trail-slider').addEventListener('input',function(){
+  trailLength=parseInt(this.value);
+  document.getElementById('trail-val').textContent=this.value;
+  particles.forEach(p=>p.trailLen=trailLength);
+});
+document.getElementById('lines-slider').addEventListener('input',function(){
+  lineDist=parseInt(this.value);
+  document.getElementById('lines-val').textContent=lineDist===0?'OFF':lineDist;
+});
 
 let last=0,fps=0;
 function loop(ts){
@@ -316,10 +473,29 @@ function loop(ts){
   ctx.fillStyle='rgba(10,10,10,0.15)';
   ctx.fillRect(0,0,W,H);
 
-  // draw attractors
+  if(lineDist>0){
+    const TH=getTheme();
+    for(let i=0;i<particles.length;i++){
+      const p=particles[i];
+      for(let j=i+1;j<particles.length;j++){
+        const p2=particles[j];
+        const dx=p.x-p2.x,dy=p.y-p2.y;
+        const d=Math.sqrt(dx*dx+dy*dy);
+        if(d<lineDist){
+          const alpha=(1-d/lineDist)*0.3;
+          ctx.beginPath();
+          ctx.moveTo(p.x,p.y);
+          ctx.lineTo(p2.x,p2.y);
+          ctx.strokeStyle=`rgba(0,255,136,${alpha})`;
+          ctx.lineWidth=0.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
   for(const a of attractors)a.draw();
 
-  // update & draw particles
   noiseOffset+=0.002;
   for(let i=particles.length-1;i>=0;i--){
     const p=particles[i];
@@ -331,8 +507,9 @@ function loop(ts){
     }
   }
 
-  // spawn
-  if(particles.length<500&&Math.random()<0.3){
+  const audioLevel=getAudioLevel();
+  const spawnRate=0.3*(1+audioLevel*2);
+  if(particles.length<500&&Math.random()<spawnRate){
     particles.push(new Particle());
     updatePC();
   }
